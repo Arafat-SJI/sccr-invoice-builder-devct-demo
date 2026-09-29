@@ -1,0 +1,20 @@
+{
+  "name": "invoice-builder-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel dev",
+    "build": "pnpm --parallel build",
+    "lint": "pnpm --parallel lint",
+    "start": "pnpm --parallel start",
+    "db:migrate:dev": "pnpm --filter server prisma migrate dev",
+    "db:push": "pnpm --filter server prisma db push",
+    "db:studio": "pnpm --filter server prisma studio"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "pnpm": "^8.15.4"
+  }
+}
