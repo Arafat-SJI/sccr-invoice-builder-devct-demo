@@ -51,6 +51,16 @@ export function AppSidebar() {
     },
   ];
 
+  const activeHref =
+    items
+      .filter((item) => !item.disabled)
+      .filter(
+        (item) =>
+          pathname === item.href ||
+          (pathname?.startsWith(item.href + "/") ?? false)
+      )
+      .sort((a, b) => b.href.length - a.href.length)[0]?.href ?? null;
+
   return (
     <Sidebar className="bg-background">
       <SidebarHeader>
@@ -69,7 +79,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {items.map((item) => {
                   const Icon = item.icon;
-                  const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+                  const isActive = item.href === activeHref;
                   return (
                     <SidebarMenuItem key={item.title}>
                       {item.disabled ? (
