@@ -44,3 +44,11 @@ export const CardDescription: React.FC<CardProps> = ({ className, children, ...p
     </p>
   );
 };
+
+export const CardFooter: React.FC<CardProps> = ({ className, children, ...props }) => {
+  return (
+    <div className={cn('flex items-center border-t px-6 py-6', className)} {...props}>
+      {children}
+    </div>
+  );
+};

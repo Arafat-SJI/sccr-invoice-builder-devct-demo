@@ -69,7 +69,7 @@ export function BusinessProfileForm({ initialValues, onSubmit, submitting, serve
   }
 
   return (
-    <Card className="w-full max-w-3xl">
+    <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
         <CardTitle>Business Profile</CardTitle>
       </CardHeader>
