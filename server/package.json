@@ -8,7 +8,8 @@
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts",
     "check:connections": "node scripts/check-connections.mjs",
-    "db:migrate:dev": "node scripts/prisma-with-root-env.mjs migrate dev",
+    "db:migrate:dev": "node scripts/db-migrate-dev.mjs",
+    "db:migrate:deploy": "node scripts/prisma-with-root-env.mjs migrate deploy",
     "db:push": "node scripts/prisma-with-root-env.mjs db push",
     "db:studio": "node scripts/prisma-with-root-env.mjs studio"
   },
