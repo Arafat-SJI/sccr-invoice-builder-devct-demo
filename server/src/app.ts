@@ -9,6 +9,7 @@ import { authenticateToken } from './middlewares/auth.middleware';
 import { AuthRequest } from './modules/auth/auth.types';
 import customerRoutes from './modules/customers/customer.routes';
 import invoiceRoutes from './modules/invoices/invoice.routes';
+import businessProfileRoutes from './modules/businessProfile/businessProfile.routes';
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/invoices', invoiceRoutes);
+app.use('/api/profile', businessProfileRoutes);
 
 // Example protected route to verify auth middleware
 app.get('/api/protected', authenticateToken, (req: AuthRequest, res) => {
