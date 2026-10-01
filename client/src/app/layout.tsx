@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} min-h-screen bg-background text-foreground antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -27,8 +27,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <Header />
-            {children}
+            <div className="relative flex min-h-screen flex-col">
+              <Header />
+              {children}
+            </div>
           </AuthProvider>
         </ThemeProvider>
       </body>

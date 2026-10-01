@@ -18,9 +18,11 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
     const decoded = verifyToken(token);
 
     // Preserve existing user object and also attach top-level userId/role for convenience
-    req.user = { id: decoded.id, role: decoded.role } as any;
-    (req as any).userId = decoded.id;
-    (req as any).role = decoded.role;
+    const role =
+      decoded.role === 'ADMIN' || decoded.role === 'USER' ? decoded.role : 'USER';
+    req.user = { id: decoded.id, role };
+    req.userId = decoded.id;
+    req.role = role;
 
     return next();
   } catch {

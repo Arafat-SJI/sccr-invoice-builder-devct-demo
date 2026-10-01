@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/auth-hooks';
 import { RegisterForm } from '@/components/auth/RegisterForm';
+import { PageContainer } from '@/components/layout/PageContainer';
 
 export default function RegisterPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -15,15 +16,15 @@ export default function RegisterPage() {
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
-        <p className="text-gray-700 dark:text-gray-300">Loading…</p>
-      </main>
+      <PageContainer>
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </PageContainer>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
+    <PageContainer>
       <RegisterForm />
-    </main>
+    </PageContainer>
   );
 }

@@ -34,6 +34,15 @@ export interface JwtPayload {
   exp?: number;
 }
 
+/** JWT user context attached by `authenticateToken`. */
+export interface AuthenticatedUser {
+  id: string;
+  role: Role;
+}
+
+/** Request after auth middleware (also augmented globally in `src/types/express.ts`). */
 export interface AuthRequest extends Request {
-  user?: { id: string; role: Role | string };
+  user?: AuthenticatedUser;
+  userId?: string;
+  role?: Role;
 }
