@@ -1,7 +1,9 @@
-import axios, { AxiosError } from 'axios';
-import { getToken } from '@/lib/auth/auth-utils';
+import apiClient, { extractApiError } from '@/lib/api/client';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+// Centralized auth API module
+// This file now delegates HTTP concerns (baseURL, headers, auth) to the shared apiClient.
+// Error extraction is also unified via extractApiError, ensuring consistent messaging and
+// field-level error handling across the application.
 
 export type User = {
   id: string | number;
@@ -26,6 +28,9 @@ export type RegisterData = {
   password: string;
 };
 
+// Shared error shape used by backend responses. While extractApiError comes from the shared
+// client, we keep these local type aliases to preserve existing imports and type usages in
+// downstream code without forcing a wider refactor.
 export type FieldErrors = Record<string, string | string[]>;
 
 export type ApiError = {
@@ -33,53 +38,47 @@ export type ApiError = {
   errors?: FieldErrors;
 };
 
-const authApi = axios.create({
-  baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
-});
-
-authApi.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) {
-    config.headers = config.headers || {};
-    (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-function extractApiError(error: unknown): ApiError {
-  const fallback: ApiError = { message: 'An unexpected error occurred.' };
-  if (!axios.isAxiosError(error)) return fallback;
-  const err = error as AxiosError<any>;
-  const data = err.response?.data;
-  if (!data) return fallback;
-  const message = typeof data.message === 'string' ? data.message : fallback.message;
-  const errors = typeof data.errors === 'object' && data.errors ? data.errors : undefined;
-  return { message, errors };
-}
-
+/**
+ * Register a new user.
+ * Relies on the shared Axios client for baseURL resolution and Authorization header injection
+ * (when a token is already available). The server is expected to return `{ token, user }`.
+ *
+ * Throws ApiError (via extractApiError) on non-2xx responses.
+ */
 export async function register(data: RegisterData): Promise<AuthResponse> {
   try {
-    const res = await authApi.post<AuthResponse>('/auth/register', data);
+    const res = await apiClient.post<AuthResponse>('/auth/register', data);
     return res.data;
   } catch (e) {
+    // Normalize backend errors to a predictable shape
     throw extractApiError(e);
   }
 }
 
+/**
+ * Login an existing user.
+ * On success, the backend should return `{ token, user }`. Token storage and usage are handled
+ * elsewhere (e.g., in auth-utils and via the shared client's interceptor adding Authorization).
+ *
+ * Throws ApiError (via extractApiError) on non-2xx responses.
+ */
 export async function login(data: LoginData): Promise<AuthResponse> {
   try {
-    const res = await authApi.post<AuthResponse>('/auth/login', data);
+    const res = await apiClient.post<AuthResponse>('/auth/login', data);
     return res.data;
   } catch (e) {
     throw extractApiError(e);
   }
 }
 
+/**
+ * Logout the current user.
+ * If the backend supports server-side logout or token invalidation, this will notify it.
+ * Any failure here is treated as non-fatal because client-side logout still proceeds.
+ */
 export async function logout(): Promise<void> {
   try {
-    // If backend supports server-side logout/token blacklist
-    await authApi.post('/auth/logout').catch(() => {});
+    await apiClient.post('/auth/logout').catch(() => {});
   } catch (e) {
     // Non-fatal: client-side logout will still proceed
   }

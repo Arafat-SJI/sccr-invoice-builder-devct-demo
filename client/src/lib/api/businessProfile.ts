@@ -1,3 +1,5 @@
+import apiClient, { extractApiError } from '@/lib/api/client';
+
 export interface BusinessProfile {
   id?: string;
   userId?: string;
@@ -15,48 +17,40 @@ export interface BusinessProfile {
   updatedAt?: string;
 }
 
-function getAuthToken(): string | null {
-  // Try common keys used in apps; backend requires Authorization: Bearer
-  if (typeof window === 'undefined') return null;
-  return (
-    localStorage.getItem('accessToken') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('authToken') ||
-    null
-  );
-}
-
-function authHeaders() {
-  const token = getAuthToken();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  return headers;
-}
-
+/**
+ * Fetch the authenticated user's business profile.
+ *
+ * Uses the shared apiClient which adds Authorization headers automatically. This ensures
+ * the request is sent to the correct Express backend host defined by NEXT_PUBLIC_API_URL
+ * and includes the Bearer token from auth-utils.
+ *
+ * Returns the BusinessProfile object or null if none exists.
+ * Throws a normalized ApiError via extractApiError for non-2xx responses.
+ */
 export async function getBusinessProfile(): Promise<BusinessProfile | null> {
-  const res = await fetch('/api/profile', {
-    method: 'GET',
-    headers: authHeaders(),
-    credentials: 'include',
-  });
-  if (res.status === 401) throw new Error('Unauthorized');
-  if (!res.ok) throw new Error((await res.json().catch(() => ({ message: 'Failed to fetch profile' }))).message);
-  const data = await res.json();
-  return data.profile ?? null;
+  try {
+    const res = await apiClient.get<{ profile: BusinessProfile | null }>('/profile');
+    return res.data.profile ?? null;
+  } catch (e) {
+    throw extractApiError(e);
+  }
 }
 
+/**
+ * Create or update the authenticated user's business profile.
+ *
+ * Although the BusinessProfile interface includes read-only fields (id, userId, timestamps),
+ * the backend will ignore or overwrite them as appropriate. Callers can pass the editable
+ * fields and any server-managed fields will be safely handled by the API.
+ *
+ * Returns the persisted BusinessProfile from the server.
+ * Throws a normalized ApiError via extractApiError for non-2xx responses.
+ */
 export async function upsertBusinessProfile(payload: BusinessProfile): Promise<BusinessProfile> {
-  const res = await fetch('/api/profile', {
-    method: 'PUT',
-    headers: authHeaders(),
-    body: JSON.stringify(payload),
-    credentials: 'include',
-  });
-  if (res.status === 401) throw new Error('Unauthorized');
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg = body?.message || 'Failed to save profile';
-    throw new Error(Array.isArray(body?.errors) ? `${msg}: ${body.errors.map((e: any) => e.message).join(', ')}` : msg);
+  try {
+    const res = await apiClient.put<{ profile: BusinessProfile }>('/profile', payload);
+    return res.data.profile;
+  } catch (e) {
+    throw extractApiError(e);
   }
-  return body.profile as BusinessProfile;
 }
