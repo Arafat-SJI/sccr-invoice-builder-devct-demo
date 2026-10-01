@@ -1,8 +1,9 @@
-import axios, { AxiosError } from 'axios';
-import { getToken } from '@/lib/auth/auth-utils';
+import { apiClient, extractApiError } from './client';
+export type { ApiError, FieldErrors } from './client';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
-
+/**
+ * User model returned from the authentication endpoints.
+ */
 export type User = {
   id: string | number;
   name?: string | null;
@@ -10,77 +11,65 @@ export type User = {
   role?: string | null;
 };
 
+/**
+ * Standard authentication response from the API containing a JWT and user info.
+ */
 export type AuthResponse = {
   token: string;
   user: User;
 };
 
+/**
+ * Credentials for logging in an existing user.
+ */
 export type LoginData = {
   email: string;
   password: string;
 };
 
+/**
+ * Registration payload for creating a new user account.
+ */
 export type RegisterData = {
   name: string;
   email: string;
   password: string;
 };
 
-export type FieldErrors = Record<string, string | string[]>;
-
-export type ApiError = {
-  message?: string;
-  errors?: FieldErrors;
-};
-
-const authApi = axios.create({
-  baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
-});
-
-authApi.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) {
-    config.headers = config.headers || {};
-    (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-function extractApiError(error: unknown): ApiError {
-  const fallback: ApiError = { message: 'An unexpected error occurred.' };
-  if (!axios.isAxiosError(error)) return fallback;
-  const err = error as AxiosError<any>;
-  const data = err.response?.data;
-  if (!data) return fallback;
-  const message = typeof data.message === 'string' ? data.message : fallback.message;
-  const errors = typeof data.errors === 'object' && data.errors ? data.errors : undefined;
-  return { message, errors };
-}
-
+/**
+ * Register a new user.
+ * On success, returns the token and basic user information.
+ */
 export async function register(data: RegisterData): Promise<AuthResponse> {
   try {
-    const res = await authApi.post<AuthResponse>('/auth/register', data);
+    const res = await apiClient.post<AuthResponse>('/auth/register', data);
     return res.data;
   } catch (e) {
     throw extractApiError(e);
   }
 }
 
+/**
+ * Log in an existing user with credentials.
+ * On success, returns the token and basic user information.
+ */
 export async function login(data: LoginData): Promise<AuthResponse> {
   try {
-    const res = await authApi.post<AuthResponse>('/auth/login', data);
+    const res = await apiClient.post<AuthResponse>('/auth/login', data);
     return res.data;
   } catch (e) {
     throw extractApiError(e);
   }
 }
 
+/**
+ * Optionally notify the server to invalidate/blacklist the token.
+ * Client-side logout/cleanup should still proceed even if this fails.
+ */
 export async function logout(): Promise<void> {
   try {
-    // If backend supports server-side logout/token blacklist
-    await authApi.post('/auth/logout').catch(() => {});
+    await apiClient.post('/auth/logout').catch(() => {});
   } catch (e) {
-    // Non-fatal: client-side logout will still proceed
+    // Non-fatal
   }
 }
