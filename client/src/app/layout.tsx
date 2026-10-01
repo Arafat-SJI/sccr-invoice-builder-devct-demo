@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/config/theme";
 import { AuthProvider } from "@/lib/auth/auth-context";
-import { Header } from "@/components/layout/Header";
+import { RootBody } from "@/components/layout/RootBody";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,17 +20,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen bg-background text-foreground antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            <div className="relative flex min-h-screen flex-col">
-              <Header />
-              {children}
-            </div>
+            <RootBody>{children}</RootBody>
           </AuthProvider>
         </ThemeProvider>
       </body>
