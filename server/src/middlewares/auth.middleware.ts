@@ -4,7 +4,7 @@ import { AuthRequest } from '../modules/auth/auth.types';
 
 export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    const authHeader = (req.headers['authorization'] || req.headers['Authorization']) as string | undefined;
     if (!authHeader || typeof authHeader !== 'string') {
       return res.status(401).json({ message: 'Unauthorized' });
     }
@@ -16,7 +16,12 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
 
     const token = parts[1];
     const decoded = verifyToken(token);
-    req.user = { id: decoded.id, role: decoded.role };
+
+    // Preserve existing user object and also attach top-level userId/role for convenience
+    req.user = { id: decoded.id, role: decoded.role } as any;
+    (req as any).userId = decoded.id;
+    (req as any).role = decoded.role;
+
     return next();
   } catch {
     return res.status(401).json({ message: 'Unauthorized' });
