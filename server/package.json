@@ -6,7 +6,8 @@
     "dev": "ts-node-dev src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint . --ext .ts",
+    "check:connections": "node scripts/check-connections.mjs"
   },
   "dependencies": {
     "@prisma/client": "^4.5.0",
