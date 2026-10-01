@@ -1,22 +1,22 @@
-import type { Metadata } from "next";
+'use client';
+
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/config/theme";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { Header } from "@/components/layout/Header";
+import { usePathname } from "next/navigation";
 
 const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Invoice Builder",
-  description: "A modern invoice management application.",
-};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isAppRoute = pathname?.startsWith('/dashboard');
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen bg-background text-foreground antialiased`}>
@@ -28,7 +28,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             <div className="relative flex min-h-screen flex-col">
-              <Header />
+              {!isAppRoute && <Header />}
               {children}
             </div>
           </AuthProvider>

@@ -33,6 +33,10 @@
     --ring: 221.2 83.2% 53.3%;
 
     --radius: 0.625rem;
+
+    /* Sidebar sizing tokens (for shadcn-style Sidebar) */
+    --sidebar-width: 280px;
+    --sidebar-collapsed-width: 64px;
   }
 
   .dark {
@@ -73,5 +77,15 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Sidebar utility classes */
+@layer components {
+  .app-sidebar-expanded {
+    width: var(--sidebar-width);
+  }
+  .app-sidebar-collapsed {
+    width: var(--sidebar-collapsed-width);
   }
 }

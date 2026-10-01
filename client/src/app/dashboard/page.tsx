@@ -1,37 +1,16 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { FileText, LayoutDashboard, Users } from 'lucide-react';
-import { useAuth } from '@/lib/auth/auth-hooks';
+import { FileText, LayoutDashboard, Users } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PageContainer } from '@/components/layout/PageContainer';
 
 export default function DashboardPage() {
-  const { isAuthenticated, isLoading, user } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) router.replace('/login');
-  }, [isAuthenticated, isLoading, router]);
-
-  if (isLoading) {
-    return (
-      <PageContainer>
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      </PageContainer>
-    );
-  }
-
   return (
-    <PageContainer centered={false} className="mx-auto w-full max-w-5xl">
+    <div className="mx-auto w-full max-w-5xl">
       <header className="mb-8 w-full space-y-1">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back{user?.name ? `, ${user.name}` : ''}. Your workspace is ready.
-        </p>
+        <p className="text-muted-foreground">Welcome back. Your workspace is ready.</p>
       </header>
 
       <div className="grid w-full gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -87,6 +66,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </PageContainer>
+    </div>
   );
 }
