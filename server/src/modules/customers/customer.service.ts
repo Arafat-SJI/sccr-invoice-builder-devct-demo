@@ -4,6 +4,14 @@ import customerRepository, {
   UpdateCustomerDTO,
 } from './customer.repository';
 
+class ConflictError extends Error {
+  status = 409 as const;
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConflictError';
+  }
+}
+
 async function listByUser(userId: string): Promise<Customer[]> {
   return customerRepository.findAllByUser(userId);
 }
@@ -21,6 +29,11 @@ async function update(id: string, data: UpdateCustomerDTO): Promise<Customer | n
 }
 
 async function remove(id: string): Promise<boolean> {
+  // Prevent deletion if invoices exist for this customer
+  const hasRefs = await customerRepository.hasInvoices(id);
+  if (hasRefs) {
+    throw new ConflictError('Customer cannot be deleted because it is referenced by existing invoices');
+  }
   return customerRepository.remove(id);
 }
 
@@ -33,3 +46,4 @@ const customerService = {
 };
 
 export default customerService;
+export { ConflictError };
