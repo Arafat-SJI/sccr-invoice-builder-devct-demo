@@ -58,20 +58,50 @@ model Customer {
   @@index([userId])
 }
 
-// Minimal Invoice model to support referential integrity with Customer
-// Extend in future stories as needed
+// Invoice model extended for full-featured invoicing
 model Invoice {
-  id            String   @id @default(uuid())
+  id            String        @id @default(uuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   customerId    String
-  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  invoiceNumber String
-  amount        Decimal  @default(0) @db.Decimal(65, 30)
-  status        String   @default("DRAFT")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  customer      Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoiceNumber String        @unique
+
+  // Dates
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime      @default(now())
+
+  // Monetary fields (server-calculated)
+  subtotal      Decimal       @default(0) @db.Decimal(65, 30)
+  discount      Decimal       @default(0) @db.Decimal(65, 30)
+  tax           Decimal       @default(0) @db.Decimal(65, 30)
+  total         Decimal       @default(0) @db.Decimal(65, 30)
+
+  // Optional notes
+  notes         String?
+
+  status        String        @default("DRAFT")
+  items         InvoiceItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@index([userId])
   @@index([customerId])
+  @@index([issueDate])
+  @@index([dueDate])
+  @@index([status])
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal  @db.Decimal(65, 30)
+  unitPrice   Decimal  @db.Decimal(65, 30)
+  amount      Decimal  @db.Decimal(65, 30)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([invoiceId])
 }

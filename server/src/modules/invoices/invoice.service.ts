@@ -5,17 +5,73 @@ import invoiceRepository, {
 } from './invoice.repository';
 import businessProfileRepository from '../businessProfile/businessProfile.repository';
 import { BusinessProfile } from '../businessProfile/businessProfile.types';
+import { generateInvoiceNumber } from './invoiceNumber.service';
+import { calculateInvoice } from './invoiceCalculation.service';
+import { PrismaClient } from '@prisma/client';
 
-async function listByUser(userId: string): Promise<Invoice[]> {
+const prisma = new PrismaClient();
+
+async function listByUser(userId: string): Promise<any[]> {
   return invoiceRepository.findAllByUser(userId);
 }
 
-async function getById(id: string): Promise<Invoice | null> {
+async function getById(id: string): Promise<any | null> {
   return invoiceRepository.findById(id);
 }
 
-async function create(userId: string, data: Omit<CreateInvoiceDTO, 'userId'>): Promise<Invoice> {
-  return invoiceRepository.create({ ...data, userId });
+/**
+ * Create an invoice with validation, ownership checks and full server-side calculations.
+ * This method will verify that the customer belongs to the user, generate a unique invoice number,
+ * compute subtotal/discount/tax/total and persist invoice + items in a transaction.
+ */
+async function create(userId: string, data: Omit<CreateInvoiceDTO, 'userId'>) {
+  // Validate customer ownership
+  if (!data.customerId) throw new Error('Customer is required');
+
+  const customer = await prisma.customer.findUnique({ where: { id: data.customerId } });
+  if (!customer || customer.userId !== userId) {
+    const err: any = new Error('Forbidden: Customer does not belong to the authenticated user');
+    err.status = 403;
+    throw err;
+  }
+
+  // Ensure at least one item
+  const items = Array.isArray(data.items) ? data.items : [];
+  if (items.length === 0) {
+    const err: any = new Error('Validation: At least one invoice item is required');
+    err.status = 400;
+    throw err;
+  }
+
+  // Server-side calculation
+  const discount = data.discount ?? 0;
+  const tax = data.tax ?? 0;
+  const calc = calculateInvoice(items, discount, tax);
+
+  // Generate invoice number
+  const invoiceNumber = await generateInvoiceNumber();
+
+  // Persist using repository which uses prisma transactions
+  const created = await invoiceRepository.create({
+    userId,
+    customerId: data.customerId,
+    items,
+    status: 'DRAFT',
+    invoiceNumber,
+    issueDate: data.issueDate,
+    dueDate: data.dueDate,
+    discount: calc.discount,
+    tax: calc.tax,
+    subtotal: calc.subtotal,
+    total: calc.total,
+    notes: data.notes,
+  });
+
+  // Enrich with business profile
+  const profile = await businessProfileRepository.findByUserId(userId);
+
+  // return both invoice and profile for convenience
+  return { ...created, businessProfile: profile || null };
 }
 
 async function update(id: string, data: UpdateInvoiceDTO): Promise<Invoice | null> {
@@ -47,9 +103,9 @@ async function getWithProfileById(id: string): Promise<InvoiceWithBusinessProfil
 }
 
 async function createWithProfile(userId: string, data: Omit<CreateInvoiceDTO, 'userId'>): Promise<InvoiceWithBusinessProfile> {
-  const invoice = await invoiceRepository.create({ ...data, userId });
-  const profile = await businessProfileRepository.findByUserId(userId);
-  return { ...invoice, businessProfile: profile || null };
+  const invoice = await create(userId, data as any);
+  // invoice already returns businessProfile in create, but keep signature
+  return invoice as any;
 }
 
 const invoiceService = {
