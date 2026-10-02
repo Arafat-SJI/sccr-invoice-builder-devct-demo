@@ -12,7 +12,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ConflictError = void 0;
 const customer_repository_1 = __importDefault(require("./customer.repository"));
+class ConflictError extends Error {
+    constructor(message) {
+        super(message);
+        this.status = 409;
+        this.name = 'ConflictError';
+    }
+}
+exports.ConflictError = ConflictError;
 function listByUser(userId) {
     return __awaiter(this, void 0, void 0, function* () {
         return customer_repository_1.default.findAllByUser(userId);
@@ -35,6 +44,11 @@ function update(id, data) {
 }
 function remove(id) {
     return __awaiter(this, void 0, void 0, function* () {
+        // Prevent deletion if invoices exist for this customer
+        const hasRefs = yield customer_repository_1.default.hasInvoices(id);
+        if (hasRefs) {
+            throw new ConflictError('Customer cannot be deleted because it is referenced by existing invoices');
+        }
         return customer_repository_1.default.remove(id);
     });
 }
