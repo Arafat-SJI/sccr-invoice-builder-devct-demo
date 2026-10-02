@@ -1,65 +1,63 @@
-import { randomUUID } from 'crypto';
-
-export type Customer = {
-  id: string;
-  userId: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type CreateCustomerDTO = Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>;
-export type UpdateCustomerDTO = Partial<Omit<Customer, 'id' | 'userId' | 'createdAt'>>;
-
-const customers: Customer[] = [];
+import { prisma } from '../../lib/prisma';
+import { Customer, CreateCustomerDTO, UpdateCustomerDTO } from './customer.types';
 
 async function findAllByUser(userId: string): Promise<Customer[]> {
-  return customers.filter((c) => c.userId === userId);
+  return prisma.customer.findMany({
+    where: { userId },
+    orderBy: { name: 'asc' },
+  });
 }
 
 async function findById(id: string): Promise<Customer | null> {
-  return customers.find((c) => c.id === id) || null;
+  return prisma.customer.findUnique({
+    where: { id },
+  });
 }
 
-async function create(data: CreateCustomerDTO): Promise<Customer> {
-  const now = new Date();
-  const customer: Customer = {
-    id: randomUUID(),
-    userId: data.userId,
-    name: data.name,
-    email: data.email,
-    phone: data.phone,
-    address: data.address,
-    createdAt: now,
-    updatedAt: now,
-  };
-  customers.push(customer);
-  return customer;
+async function create(data: CreateCustomerDTO & { userId: string }): Promise<Customer> {
+  return prisma.customer.create({
+    data: {
+      userId: data.userId,
+      name: data.name,
+      email: data.email || null,
+      phone: data.phone || null,
+      addressLine1: data.addressLine1 || null,
+      addressLine2: data.addressLine2 || null,
+      city: data.city || null,
+      state: data.state || null,
+      postalCode: data.postalCode || null,
+      country: data.country || null,
+    },
+  });
 }
 
 async function update(id: string, data: UpdateCustomerDTO): Promise<Customer | null> {
-  const index = customers.findIndex((c) => c.id === id);
-  if (index === -1) return null;
-
-  const current = customers[index];
-  const updated: Customer = {
-    ...current,
-    ...data,
-    userId: current.userId, // never allow changing ownership here
-    updatedAt: new Date(),
-  };
-  customers[index] = updated;
-  return updated;
+  return prisma.customer.update({
+    where: { id },
+    data: {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      addressLine1: data.addressLine1,
+      addressLine2: data.addressLine2,
+      city: data.city,
+      state: data.state,
+      postalCode: data.postalCode,
+      country: data.country,
+    },
+  });
 }
 
-async function remove(id: string): Promise<boolean> {
-  const index = customers.findIndex((c) => c.id === id);
-  if (index === -1) return false;
-  customers.splice(index, 1);
-  return true;
+async function remove(id: string): Promise<Customer | null> {
+  return prisma.customer.delete({
+    where: { id },
+  });
+}
+
+async function countInvoicesByCustomer(customerId: string): Promise<number> {
+  return prisma.invoice.count({
+    where: { customerId },
+  });
 }
 
 export const customerRepository = {
@@ -68,6 +66,7 @@ export const customerRepository = {
   create,
   update,
   remove,
+  countInvoicesByCustomer,
 };
 
 export default customerRepository;

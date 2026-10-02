@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import customerService from './customer.service';
+import { NotFoundError, UnauthorizedError, ConflictError } from '../../utils/errors';
 
 export async function listCustomers(req: Request, res: Response, next: NextFunction) {
   try {
@@ -16,10 +17,15 @@ export async function listCustomers(req: Request, res: Response, next: NextFunct
 export async function getCustomer(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
-    const customer = await customerService.getById(id);
+    const userId = req.userId || req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const customer = await customerService.getById(id, userId);
     if (!customer) return res.status(404).json({ message: 'Not Found: Resource not found.' });
     return res.json(customer);
   } catch (err) {
+    if (err instanceof NotFoundError) return res.status(404).json({ message: err.message });
+    if (err instanceof UnauthorizedError) return res.status(403).json({ message: err.message });
     return next(err);
   }
 }
@@ -29,12 +35,8 @@ export async function createCustomer(req: Request, res: Response, next: NextFunc
     const userId = req.userId || req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const { name, email, phone, address } = req.body || {};
-    if (!name || typeof name !== 'string') {
-      return res.status(400).json({ message: 'Bad Request: name is required.' });
-    }
-
-    const created = await customerService.create(userId, { name, email, phone, address });
+    const customerData = req.body;
+    const created = await customerService.create(userId, customerData);
     return res.status(201).json(created);
   } catch (err) {
     return next(err);
@@ -44,13 +46,17 @@ export async function createCustomer(req: Request, res: Response, next: NextFunc
 export async function updateCustomer(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
-    const { name, email, phone, address } = req.body || {};
+    const userId = req.userId || req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const updated = await customerService.update(id, { name, email, phone, address });
+    const customerData = req.body;
+    const updated = await customerService.update(id, userId, customerData);
     if (!updated) return res.status(404).json({ message: 'Not Found: Resource not found.' });
 
     return res.json(updated);
   } catch (err) {
+    if (err instanceof NotFoundError) return res.status(404).json({ message: err.message });
+    if (err instanceof UnauthorizedError) return res.status(403).json({ message: err.message });
     return next(err);
   }
 }
@@ -58,10 +64,16 @@ export async function updateCustomer(req: Request, res: Response, next: NextFunc
 export async function deleteCustomer(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
-    const ok = await customerService.remove(id);
+    const userId = req.userId || req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const ok = await customerService.remove(id, userId);
     if (!ok) return res.status(404).json({ message: 'Not Found: Resource not found.' });
     return res.status(204).send();
   } catch (err) {
+    if (err instanceof NotFoundError) return res.status(404).json({ message: err.message });
+    if (err instanceof UnauthorizedError) return res.status(403).json({ message: err.message });
+    if (err instanceof ConflictError) return res.status(409).json({ message: err.message });
     return next(err);
   }
 }

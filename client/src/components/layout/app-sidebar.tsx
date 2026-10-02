@@ -39,9 +39,9 @@ export function AppSidebar() {
     },
     {
       title: "Customers",
-      href: "/customers",
+      href: "/dashboard/customers",
       icon: Users,
-      disabled: true,
+      disabled: false,
     },
     {
       title: "Business Profile",
