@@ -8,15 +8,18 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         String   @default("USER")
-  status       String   @default("ACTIVE")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String           @id @default(uuid())
+  name            String
+  email           String           @unique
+  passwordHash    String
+  role            String           @default("USER")
+  status          String           @default("ACTIVE")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   businessProfile BusinessProfile?
+  // Relations
+  customers       Customer[]
+  invoices        Invoice[]
 }
 
 model BusinessProfile {
@@ -35,4 +38,39 @@ model BusinessProfile {
   contactPhone  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// New model for managing customer contacts owned by a specific user
+model Customer {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  email     String   @unique
+  phone     String?
+  address   String?
+  taxId     String?
+  invoices  Invoice[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Minimal Invoice model to support referential integrity with Customer
+// Extend in future stories as needed
+model Invoice {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  number     String
+  status     String   @default("DRAFT")
+  total      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([customerId])
 }
