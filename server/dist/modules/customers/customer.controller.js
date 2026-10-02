@@ -14,6 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteCustomer = exports.updateCustomer = exports.createCustomer = exports.getCustomer = exports.listCustomers = void 0;
 const customer_service_1 = __importDefault(require("./customer.service"));
+const errors_1 = require("../../utils/errors");
 function listCustomers(req, res, next) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
@@ -31,15 +32,23 @@ function listCustomers(req, res, next) {
 }
 exports.listCustomers = listCustomers;
 function getCustomer(req, res, next) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const { id } = req.params;
-            const customer = yield customer_service_1.default.getById(id);
+            const userId = req.userId || ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id);
+            if (!userId)
+                return res.status(401).json({ message: 'Unauthorized' });
+            const customer = yield customer_service_1.default.getById(id, userId);
             if (!customer)
                 return res.status(404).json({ message: 'Not Found: Resource not found.' });
             return res.json(customer);
         }
         catch (err) {
+            if (err instanceof errors_1.NotFoundError)
+                return res.status(404).json({ message: err.message });
+            if (err instanceof errors_1.UnauthorizedError)
+                return res.status(403).json({ message: err.message });
             return next(err);
         }
     });
@@ -52,11 +61,8 @@ function createCustomer(req, res, next) {
             const userId = req.userId || ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id);
             if (!userId)
                 return res.status(401).json({ message: 'Unauthorized' });
-            const { name, email, phone, address } = req.body || {};
-            if (!name || typeof name !== 'string') {
-                return res.status(400).json({ message: 'Bad Request: name is required.' });
-            }
-            const created = yield customer_service_1.default.create(userId, { name, email, phone, address });
+            const customerData = req.body;
+            const created = yield customer_service_1.default.create(userId, customerData);
             return res.status(201).json(created);
         }
         catch (err) {
@@ -66,31 +72,49 @@ function createCustomer(req, res, next) {
 }
 exports.createCustomer = createCustomer;
 function updateCustomer(req, res, next) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const { id } = req.params;
-            const { name, email, phone, address } = req.body || {};
-            const updated = yield customer_service_1.default.update(id, { name, email, phone, address });
+            const userId = req.userId || ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id);
+            if (!userId)
+                return res.status(401).json({ message: 'Unauthorized' });
+            const customerData = req.body;
+            const updated = yield customer_service_1.default.update(id, userId, customerData);
             if (!updated)
                 return res.status(404).json({ message: 'Not Found: Resource not found.' });
             return res.json(updated);
         }
         catch (err) {
+            if (err instanceof errors_1.NotFoundError)
+                return res.status(404).json({ message: err.message });
+            if (err instanceof errors_1.UnauthorizedError)
+                return res.status(403).json({ message: err.message });
             return next(err);
         }
     });
 }
 exports.updateCustomer = updateCustomer;
 function deleteCustomer(req, res, next) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const { id } = req.params;
-            const ok = yield customer_service_1.default.remove(id);
+            const userId = req.userId || ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id);
+            if (!userId)
+                return res.status(401).json({ message: 'Unauthorized' });
+            const ok = yield customer_service_1.default.remove(id, userId);
             if (!ok)
                 return res.status(404).json({ message: 'Not Found: Resource not found.' });
             return res.status(204).send();
         }
         catch (err) {
+            if (err instanceof errors_1.NotFoundError)
+                return res.status(404).json({ message: err.message });
+            if (err instanceof errors_1.UnauthorizedError)
+                return res.status(403).json({ message: err.message });
+            if (err instanceof errors_1.ConflictError)
+                return res.status(409).json({ message: err.message });
             return next(err);
         }
     });

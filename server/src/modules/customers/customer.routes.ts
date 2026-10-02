@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { authenticateToken } from '../../middlewares/auth.middleware';
-import customerService from './customer.service';
 import {
   listCustomers,
   getCustomer,

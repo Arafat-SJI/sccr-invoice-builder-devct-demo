@@ -1,5 +1,5 @@
 import customerRepository from './customer.repository';
-import { Customer, CreateCustomerDTO, UpdateCustomerDTO } from './customer.types';
+import { Customer } from './customer.types';
 import { createCustomerSchema, updateCustomerSchema, CreateCustomerInput, UpdateCustomerInput } from './customer.validation';
 import { ConflictError, NotFoundError, UnauthorizedError } from '../../utils/errors';
 
@@ -14,9 +14,23 @@ async function getById(id: string, userId: string): Promise<Customer | null> {
   return customer;
 }
 
+function toCreateDto(data: CreateCustomerInput) {
+  return {
+    name: data.name,
+    email: data.email ?? null,
+    phone: data.phone ?? null,
+    addressLine1: data.addressLine1 ?? null,
+    addressLine2: data.addressLine2 ?? null,
+    city: data.city ?? null,
+    state: data.state ?? null,
+    postalCode: data.postalCode ?? null,
+    country: data.country ?? null,
+  };
+}
+
 async function create(userId: string, data: CreateCustomerInput): Promise<Customer> {
   const validatedData = createCustomerSchema.parse(data);
-  return customerRepository.create({ ...validatedData, userId });
+  return customerRepository.create({ ...toCreateDto(validatedData), userId });
 }
 
 async function update(id: string, userId: string, data: UpdateCustomerInput): Promise<Customer | null> {
