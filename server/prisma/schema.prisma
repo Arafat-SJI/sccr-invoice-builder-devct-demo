@@ -17,6 +17,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   businessProfile BusinessProfile?
+  customers    Customer[]
 }
 
 model BusinessProfile {
@@ -35,4 +36,34 @@ model BusinessProfile {
   contactPhone  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// Customer model added to support user-owned customers used by invoices.
+model Customer {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Core contact fields
+  name          String
+  email         String?
+  phone         String?
+
+  // Address fields split for better querying/display
+  addressLine1  String?
+  addressLine2  String?
+  city          String?
+  state         String?
+  zipCode       String?
+  country       String?
+
+  // Soft delete field to preserve invoice historical integrity
+  deletedAt     DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  // Ensure a user cannot create duplicate customer emails (per-user uniqueness)
+  @@unique([userId, email], name: "unique_user_email")
 }

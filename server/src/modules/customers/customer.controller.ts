@@ -18,6 +18,12 @@ export async function getCustomer(req: Request, res: Response, next: NextFunctio
     const { id } = req.params;
     const customer = await customerService.getById(id);
     if (!customer) return res.status(404).json({ message: 'Not Found: Resource not found.' });
+
+    // If resource has been soft-deleted, treat as not found for detail endpoint
+    if (customer.deletedAt) {
+      return res.status(404).json({ message: 'Not Found: Resource not found.' });
+    }
+
     return res.json(customer);
   } catch (err) {
     return next(err);
@@ -29,12 +35,36 @@ export async function createCustomer(req: Request, res: Response, next: NextFunc
     const userId = req.userId || req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const { name, email, phone, address } = req.body || {};
+    const {
+      name,
+      email,
+      phone,
+      address,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      zipCode,
+      country,
+    } = req.body || {};
+
     if (!name || typeof name !== 'string') {
       return res.status(400).json({ message: 'Bad Request: name is required.' });
     }
 
-    const created = await customerService.create(userId, { name, email, phone, address });
+    const created = await customerService.create(userId, {
+      name,
+      email,
+      phone,
+      address,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      zipCode,
+      country,
+      userId: userId,
+    });
     return res.status(201).json(created);
   } catch (err) {
     return next(err);
@@ -44,10 +74,35 @@ export async function createCustomer(req: Request, res: Response, next: NextFunc
 export async function updateCustomer(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
-    const { name, email, phone, address } = req.body || {};
+    const {
+      name,
+      email,
+      phone,
+      address,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      zipCode,
+      country,
+    } = req.body || {};
 
-    const updated = await customerService.update(id, { name, email, phone, address });
+    const updated = await customerService.update(id, {
+      name,
+      email,
+      phone,
+      address,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      zipCode,
+      country,
+    });
     if (!updated) return res.status(404).json({ message: 'Not Found: Resource not found.' });
+
+    // If we updated a record that was soft-deleted, return 404 to clients (shouldn't happen under normal ownership checks)
+    if (updated.deletedAt) return res.status(404).json({ message: 'Not Found: Resource not found.' });
 
     return res.json(updated);
   } catch (err) {

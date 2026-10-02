@@ -73,3 +73,13 @@ export function requireOwnership<T extends ResourceWithOwner>(getResourceFn: Get
     }
   };
 }
+
+/**
+ * Convenience wrapper for express routes that want a named ownership middleware.
+ * Keeps the public API clearer when wiring customer-specific handlers in routes.
+ * Example usage:
+ *   router.get('/:id', requireOwnershipByName(getCustomerById), getCustomerHandler)
+ */
+export function requireOwnershipByName<T extends ResourceWithOwner>(getResourceFn: GetResourceFn<T>) {
+  return requireOwnership(getResourceFn);
+}

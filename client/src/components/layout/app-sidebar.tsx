@@ -39,9 +39,10 @@ export function AppSidebar() {
     },
     {
       title: "Customers",
-      href: "/customers",
+      // changed to the dashboard path group and enabled so the new UI is reachable
+      href: "/dashboard/customers",
       icon: Users,
-      disabled: true,
+      disabled: false,
     },
     {
       title: "Business Profile",
