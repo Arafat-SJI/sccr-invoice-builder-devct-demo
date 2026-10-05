@@ -12,8 +12,11 @@ export type Invoice = {
   id: string;
   userId: string;
   customerId?: string;
+  invoiceNumber: string;
   items: InvoiceItem[];
   subtotal: number;
+  discount: number;
+  tax: number;
   total: number;
   status: InvoiceStatus;
   createdAt: Date;
@@ -24,6 +27,9 @@ export type CreateInvoiceDTO = {
   userId: string;
   customerId?: string;
   items?: InvoiceItem[];
+  discount?: number;
+  tax?: number;
+  notes?: string;
   status?: InvoiceStatus;
 };
 
@@ -43,13 +49,17 @@ async function create(data: CreateInvoiceDTO): Promise<Invoice> {
   const now = new Date();
   const items = Array.isArray(data.items) ? data.items : [];
   const subtotal = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+  const total = subtotal - (data.discount || 0) + (data.tax || 0);
   const invoice: Invoice = {
     id: randomUUID(),
     userId: data.userId,
     customerId: data.customerId,
+    invoiceNumber: data.invoiceNumber || '',
     items,
     subtotal,
-    total: subtotal, // simple model: total === subtotal (no tax/discounts here)
+    discount: data.discount || 0,
+    tax: data.tax || 0,
+    total,
     status: data.status ?? 'DRAFT',
     createdAt: now,
     updatedAt: now,
@@ -67,14 +77,15 @@ async function update(id: string, data: UpdateInvoiceDTO): Promise<Invoice | nul
   if (!Array.isArray(items)) items = current.items;
 
   const subtotal = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+  const total = subtotal - (data.discount || 0) + (data.tax || 0);
 
   const updated: Invoice = {
     ...current,
     ...data,
     items,
     subtotal,
-    total: subtotal,
-    userId: current.userId, // do not allow changing ownership
+    total,
+    userId: current.userId,
     updatedAt: new Date(),
   };
   invoices[index] = updated;

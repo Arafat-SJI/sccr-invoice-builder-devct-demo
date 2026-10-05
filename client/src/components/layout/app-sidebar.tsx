@@ -33,9 +33,9 @@ export function AppSidebar() {
     },
     {
       title: "Invoices",
-      href: "/invoices",
+      href: "/dashboard/invoices",
       icon: FileText,
-      disabled: true,
+      disabled: false,
     },
     {
       title: "Customers",
