@@ -18,6 +18,12 @@ export type Invoice = {
   status: InvoiceStatus;
   createdAt: Date;
   updatedAt: Date;
+  invoiceNumber?: string;
+  issueDate?: Date | null;
+  dueDate?: Date | null;
+  discount?: number;
+  tax?: number;
+  notes?: string | null;
 };
 
 export type CreateInvoiceDTO = {
@@ -25,6 +31,12 @@ export type CreateInvoiceDTO = {
   customerId?: string;
   items?: InvoiceItem[];
   status?: InvoiceStatus;
+  invoiceNumber?: string;
+  issueDate?: Date | null;
+  dueDate?: Date | null;
+  discount?: number;
+  tax?: number;
+  notes?: string | null;
 };
 
 export type UpdateInvoiceDTO = Partial<Omit<Invoice, 'id' | 'userId' | 'createdAt'>>;
@@ -43,13 +55,23 @@ async function create(data: CreateInvoiceDTO): Promise<Invoice> {
   const now = new Date();
   const items = Array.isArray(data.items) ? data.items : [];
   const subtotal = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+  const discount = typeof data.discount === 'number' ? data.discount : 0;
+  const tax = typeof data.tax === 'number' ? data.tax : 0;
+  const total = subtotal - discount + tax;
+
   const invoice: Invoice = {
     id: randomUUID(),
     userId: data.userId,
     customerId: data.customerId,
     items,
     subtotal,
-    total: subtotal, // simple model: total === subtotal (no tax/discounts here)
+    discount,
+    tax,
+    total,
+    invoiceNumber: data.invoiceNumber ?? `INV-${now.getTime()}`,
+    issueDate: data.issueDate ?? null,
+    dueDate: data.dueDate ?? null,
+    notes: data.notes ?? null,
     status: data.status ?? 'DRAFT',
     createdAt: now,
     updatedAt: now,
@@ -67,13 +89,15 @@ async function update(id: string, data: UpdateInvoiceDTO): Promise<Invoice | nul
   if (!Array.isArray(items)) items = current.items;
 
   const subtotal = items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+  const discount = typeof data.discount === 'number' ? data.discount : current.discount ?? 0;
+  const tax = typeof data.tax === 'number' ? data.tax : current.tax ?? 0;
 
   const updated: Invoice = {
     ...current,
     ...data,
     items,
     subtotal,
-    total: subtotal,
+    total: subtotal - (discount ?? 0) + (tax ?? 0),
     userId: current.userId, // do not allow changing ownership
     updatedAt: new Date(),
   };

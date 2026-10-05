@@ -58,20 +58,41 @@ model Customer {
   @@index([userId])
 }
 
-// Minimal Invoice model to support referential integrity with Customer
-// Extend in future stories as needed
+// Invoice model extended to support invoice builder with items, totals and notes
 model Invoice {
-  id            String   @id @default(uuid())
+  id            String        @id @default(uuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   customerId    String
-  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  invoiceNumber String
-  amount        Decimal  @default(0) @db.Decimal(65, 30)
-  status        String   @default("DRAFT")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  customer      Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  invoiceNumber String        @unique
+  issueDate     DateTime?
+  dueDate       DateTime?
+  subtotal      Decimal       @default(0) @db.Decimal(65, 30)
+  discount      Decimal       @default(0) @db.Decimal(65, 30)
+  tax           Decimal       @default(0) @db.Decimal(65, 30)
+  total         Decimal       @default(0) @db.Decimal(65, 30)
+  notes         String?
+  status        String        @default("DRAFT")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  items         InvoiceItem[]
 
   @@index([userId])
   @@index([customerId])
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(65, 30)
+  amount      Decimal  @db.Decimal(65, 30)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([invoiceId])
 }
