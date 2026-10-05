@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileText, Users, LogOut, Building2 } from "lucide-react";
+import { LayoutDashboard, FileText, Users, LogOut, Building2, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -33,9 +33,15 @@ export function AppSidebar() {
     },
     {
       title: "Invoices",
-      href: "/invoices",
+      href: "/dashboard/invoices",
       icon: FileText,
-      disabled: true,
+      disabled: false,
+    },
+    {
+      title: "Create Invoice",
+      href: "/dashboard/invoices/create",
+      icon: PlusCircle,
+      disabled: false,
     },
     {
       title: "Customers",
