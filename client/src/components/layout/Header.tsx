@@ -8,6 +8,11 @@ import { useAuth } from '@/lib/auth/auth-hooks';
 export function Header() {
   const { isAuthenticated, user, logout, isLoading } = useAuth();
 
+  const displayName = (() => {
+    const meta: any = user?.user_metadata ?? {};
+    return meta.full_name || user?.email || '';
+  })();
+
   return (
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -21,7 +26,7 @@ export function Header() {
           {isAuthenticated ? (
             <>
               <span className="mr-2 hidden max-w-[12rem] truncate text-sm text-muted-foreground sm:inline">
-                {user?.name || user?.email}
+                {displayName}
               </span>
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/dashboard">Dashboard</Link>

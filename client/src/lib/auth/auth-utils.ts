@@ -1,3 +1,5 @@
+import { AuthApiError } from '@supabase/supabase-js';
+
 export type StoredUser = {
   id: string | number;
   name?: string | null;
@@ -5,62 +7,34 @@ export type StoredUser = {
   role?: string | null;
 };
 
-const TOKEN_KEY = 'ib_auth_token';
-const USER_KEY = 'ib_auth_user';
-
-export function setToken(token: string): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(TOKEN_KEY, token);
-  } catch (e) {
-    console.error('Failed to persist token', e);
+/**
+ * Extracts a user-friendly error message from a Supabase AuthApiError or generic Error.
+ * @param error The error object from a Supabase auth operation.
+ * @returns A string message suitable for display to the user.
+ */
+export function getSupabaseErrorMessage(error: unknown): string {
+  if (error instanceof AuthApiError) {
+    const msg = error.message || '';
+    switch (msg) {
+      case 'Invalid login credentials':
+      case 'Invalid email or password':
+        return 'Invalid email or password. Please try again.';
+      case 'User already registered':
+        return 'An account with this email already exists. Please log in.';
+      case 'Email not confirmed':
+        return 'Please check your inbox to confirm your email address.';
+      case 'Email rate limit exceeded':
+        return 'Too many requests. Please try again in a few minutes.';
+      case 'Password should be at least 6 characters':
+        return 'Password must be at least 6 characters long.';
+      default: {
+        const formatted = msg.charAt(0).toUpperCase() + msg.slice(1);
+        return formatted.endsWith('.') ? formatted : `${formatted}.`;
+      }
+    }
   }
-}
-
-export function getToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch (e) {
-    console.error('Failed to read token', e);
-    return null;
+  if (error instanceof Error) {
+    return error.message;
   }
-}
-
-export function removeToken(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.removeItem(TOKEN_KEY);
-  } catch (e) {
-    console.error('Failed to remove token', e);
-  }
-}
-
-export function setUser(user: StoredUser): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-  } catch (e) {
-    console.error('Failed to persist user', e);
-  }
-}
-
-export function getUser(): StoredUser | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? (JSON.parse(raw) as StoredUser) : null;
-  } catch (e) {
-    console.error('Failed to read user', e);
-    return null;
-  }
-}
-
-export function removeUser(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.removeItem(USER_KEY);
-  } catch (e) {
-    console.error('Failed to remove user', e);
-  }
+  return 'An unexpected error occurred. Please try again.';
 }

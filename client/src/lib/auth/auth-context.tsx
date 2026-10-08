@@ -2,110 +2,144 @@
 
 import { createContext, useCallback, useEffect, useMemo, useState, ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import type { User, LoginData, RegisterData } from '@/lib/api/auth';
-import { login as apiLogin, register as apiRegister, logout as apiLogout } from '@/lib/api/auth';
-import { getToken, setToken, removeToken, getUser, setUser, removeUser } from '@/lib/auth/auth-utils';
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase/client';
+import { getSupabaseErrorMessage } from '@/lib/auth/auth-utils';
 
 export type AuthContextType = {
-  user: User | null;
-  token: string | null;
+  user: SupabaseUser | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (data: LoginData) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  login: (data: { email: string; password: string }) => Promise<void>;
+  register: (data: { name: string; email: string; password: string }) => Promise<{ emailConfirmationRequired: boolean }>;
   logout: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUserState] = useState<User | null>(null);
-  const [token, setTokenState] = useState<string | null>(null);
+export function AuthProvider({
+  children,
+  initialUser = null,
+  initialSession = null,
+}: {
+  children: ReactNode;
+  initialUser?: SupabaseUser | null;
+  initialSession?: Session | null;
+}) {
+  const [user, setUser] = useState<SupabaseUser | null>(initialUser);
+  const [session, setSession] = useState<Session | null>(initialSession);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const router = useRouter();
   const pathname = usePathname();
 
-  const isAuthenticated = !!token && !!user;
+  const isAuthenticated = !!session?.user?.id;
 
-  // Initialize from localStorage
+  // Initialize on client from Supabase
   useEffect(() => {
-    const init = () => {
+    let mounted = true;
+    const init = async () => {
       try {
-        const savedToken = getToken();
-        const savedUser = getUser();
-        if (savedToken) setTokenState(savedToken);
-        if (savedUser) setUserState(savedUser as User);
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!mounted) return;
+        setSession(sessionData.session ?? null);
+        setUser(sessionData.session?.user ?? null);
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
     init();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+    });
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
-  const doLogin = useCallback(async (data: LoginData) => {
+  const login = useCallback(async ({ email, password }: { email: string; password: string }) => {
     setIsLoading(true);
     try {
-      const { token: tk, user: usr } = await apiLogin(data);
-      setToken(tk);
-      setUser(usr);
-      setTokenState(tk);
-      setUserState(usr);
-      router.push('/dashboard');
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      setSession(data.session ?? null);
+      setUser(data.user ?? data.session?.user ?? null);
+      router.push('/');
+    } catch (err) {
+      throw new Error(getSupabaseErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
   }, [router]);
 
-  const doRegister = useCallback(async (data: RegisterData) => {
+  const register = useCallback(async ({ name, email, password }: { name: string; email: string; password: string }) => {
     setIsLoading(true);
     try {
-      const { token: tk, user: usr } = await apiRegister(data);
-      setToken(tk);
-      setUser(usr);
-      setTokenState(tk);
-      setUserState(usr);
-      router.push('/dashboard');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: name },
+        },
+      });
+      if (error) throw error;
+
+      // If session is returned, user is signed in immediately
+      if (data.session) {
+        setSession(data.session);
+        setUser(data.user ?? data.session.user);
+        router.push('/');
+        return { emailConfirmationRequired: false };
+      }
+
+      // Otherwise, email confirmation is required
+      setSession(null);
+      setUser(data.user ?? null);
+      return { emailConfirmationRequired: true };
+    } catch (err) {
+      throw new Error(getSupabaseErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
   }, [router]);
 
-  const doLogout = useCallback(async () => {
+  const logout = useCallback(async () => {
     setIsLoading(true);
     try {
-      await apiLogout();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (err) {
+      // Even if signOut throws, clear client state to avoid being stuck
     } finally {
-      removeToken();
-      removeUser();
-      setTokenState(null);
-      setUserState(null);
-      router.push('/login');
+      setSession(null);
+      setUser(null);
+      router.push('/');
       setIsLoading(false);
     }
   }, [router]);
 
-  // Client-side route protection and redirects
+  // Client-side redirect behavior for auth routes
   useEffect(() => {
     if (isLoading) return;
-    const protectedRoutes = ['/dashboard'];
     const authRoutes = ['/login', '/register'];
-
     if (isAuthenticated && authRoutes.includes(pathname)) {
-      router.replace('/dashboard');
-    } else if (!isAuthenticated && protectedRoutes.includes(pathname)) {
-      router.replace('/login');
+      router.replace('/');
     }
   }, [isAuthenticated, isLoading, pathname, router]);
 
   const value = useMemo<AuthContextType>(() => ({
     user,
-    token,
+    session,
     isAuthenticated,
     isLoading,
-    login: doLogin,
-    register: doRegister,
-    logout: doLogout,
-  }), [user, token, isAuthenticated, isLoading, doLogin, doRegister, doLogout]);
+    login,
+    register,
+    logout,
+  }), [user, session, isAuthenticated, isLoading, login, register, logout]);
 
   return (
     <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

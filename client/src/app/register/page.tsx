@@ -11,7 +11,7 @@ export default function RegisterPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) router.replace('/dashboard');
+    if (!isLoading && isAuthenticated) router.replace('/');
   }, [isAuthenticated, isLoading, router]);
 
   if (isLoading) {
