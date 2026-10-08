@@ -10,19 +10,26 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/auth-hooks';
-import type { ApiError } from '@/lib/api/auth';
+import { getSupabaseErrorMessage } from '@/lib/auth/auth-utils';
 
-const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
+const registerSchema = z
+  .object({
+    name: z.string().min(2, 'Name must be at least 2 characters'),
+    email: z.string().email('Please enter a valid email address'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
-type RegisterFormInputs = z.infer<typeof registerSchema>;
+export type RegisterFormInputs = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
   const { register: doRegister, isLoading } = useAuth();
   const [apiError, setApiError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const { register, handleSubmit, setError, formState: { errors } } = useForm<RegisterFormInputs>({
     resolver: zodResolver(registerSchema),
     mode: 'onSubmit',
@@ -30,19 +37,21 @@ export function RegisterForm() {
 
   const onSubmit = async (data: RegisterFormInputs) => {
     setApiError(null);
+    setInfoMessage(null);
     try {
-      await doRegister(data);
-    } catch (err: unknown) {
-      const e = (err || {}) as ApiError;
-      if (e.errors) {
-        Object.entries(e.errors).forEach(([field, message]) => {
-          const msg = Array.isArray(message) ? message.join(', ') : message;
-          if (field in data) {
-            setError(field as keyof RegisterFormInputs, { type: 'server', message: msg });
-          }
-        });
+      const result = await doRegister({ name: data.name, email: data.email, password: data.password });
+      if (result?.emailConfirmationRequired) {
+        setInfoMessage('Please check your inbox to confirm your email address.');
       }
-      setApiError(e.message || 'Registration failed.');
+    } catch (err: unknown) {
+      const message = getSupabaseErrorMessage(err);
+      // Attempt basic field mapping for common cases
+      if (/email/i.test(message)) {
+        setError('email', { type: 'server', message });
+      } else if (/password/i.test(message)) {
+        setError('password', { type: 'server', message });
+      }
+      setApiError(message);
     }
   };
 
@@ -69,9 +78,19 @@ export function RegisterForm() {
             <Input id="password" type="password" placeholder="••••••••" disabled={isLoading} {...register('password')} />
             {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm password</Label>
+            <Input id="confirmPassword" type="password" placeholder="••••••••" disabled={isLoading} {...register('confirmPassword')} />
+            {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
+          </div>
           {apiError && (
             <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
               {apiError}
+            </p>
+          )}
+          {infoMessage && (
+            <p className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-center text-sm text-primary">
+              {infoMessage}
             </p>
           )}
           <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
