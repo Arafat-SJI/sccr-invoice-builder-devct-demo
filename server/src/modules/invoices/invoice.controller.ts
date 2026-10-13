@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import invoiceService from './invoice.service';
+import { createInvoiceSchema } from './invoice.validation';
 
 export async function listInvoices(req: Request, res: Response, next: NextFunction) {
   try {
@@ -29,8 +30,12 @@ export async function createInvoice(req: Request, res: Response, next: NextFunct
     const userId = req.userId || req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const { customerId, items, status } = req.body || {};
-    const created = await invoiceService.create(userId, { customerId, items, status });
+    const parsedBody = createInvoiceSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({ message: 'Validation Error', errors: parsedBody.error.format() });
+    }
+
+    const created = await invoiceService.create(userId, parsedBody.data);
     return res.status(201).json(created);
   } catch (err) {
     return next(err);

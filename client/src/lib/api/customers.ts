@@ -3,7 +3,7 @@ import { Customer, CustomerCreateInput, CustomerUpdateInput } from "./customer.t
 
 export async function getAllCustomers(): Promise<Customer[]> {
   try {
-    const res = await apiClient.get<Customer[]>("/customers");
+    const res = await apiClient.get<Customer[]>('/customers');
     return res.data;
   } catch (error) {
     throw extractApiError(error);
@@ -21,7 +21,7 @@ export async function getCustomerById(id: string): Promise<Customer> {
 
 export async function createCustomer(data: CustomerCreateInput): Promise<Customer> {
   try {
-    const res = await apiClient.post<Customer>("/customers", data);
+    const res = await apiClient.post<Customer>('/customers', data);
     return res.data;
   } catch (error) {
     throw extractApiError(error);
