@@ -1,7 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { getToken } from '@/lib/auth/auth-utils';
 
-// Normalize base URL from env and ensure no trailing slash
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 
 export type FieldErrors = Record<string, string | string[]>;
@@ -16,7 +15,6 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach Authorization header when a token is present
 apiClient.interceptors.request.use(
   (config) => {
     const token = getToken();
