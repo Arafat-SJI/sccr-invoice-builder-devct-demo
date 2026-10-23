@@ -29,5 +29,23 @@ export default function DashboardLayout({
 
   if (!isAuthenticated) return null;
 
-  return <DashboardShell>{children}</DashboardShell>;
+  return (
+    <DashboardShell>
+      <div className="flex items-center justify-between p-4 border-b">
+        <div>
+          <h2 className="text-lg font-semibold">Dashboard</h2>
+          <p className="text-sm text-muted-foreground">Manage your invoices and customers</p>
+        </div>
+        <div>
+          <button
+            onClick={() => router.push("/dashboard/invoices/create")}
+            className="inline-flex items-center rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+          >
+            New Invoice
+          </button>
+        </div>
+      </div>
+      {children}
+    </DashboardShell>
+  );
 }
