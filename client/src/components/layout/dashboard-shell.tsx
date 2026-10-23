@@ -12,6 +12,7 @@ import {
   SidebarInset,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { AppFooter } from "@/components/layout/app-footer";
 
 function MobileSidebar() {
   const { mobileOpen, setMobileOpen } = useSidebar();
@@ -49,6 +50,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <main className={cn("flex-1 p-4 sm:p-6")}>{children}</main>
+          <AppFooter />
         </SidebarInset>
       </div>
     </SidebarProvider>
