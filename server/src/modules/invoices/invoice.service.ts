@@ -5,6 +5,7 @@ import invoiceRepository, {
 } from './invoice.repository';
 import businessProfileRepository from '../businessProfile/businessProfile.repository';
 import { BusinessProfile } from '../businessProfile/businessProfile.types';
+import { InvoiceQueryParams, PaginatedInvoicesResponse } from './invoice.types';
 
 async function listByUser(userId: string): Promise<Invoice[]> {
   return invoiceRepository.findAllByUser(userId);
@@ -40,16 +41,28 @@ async function listWithProfileByUser(userId: string): Promise<InvoiceWithBusines
 async function getWithProfileById(id: string): Promise<InvoiceWithBusinessProfile | null> {
   const invoice = await invoiceRepository.findById(id);
   if (!invoice) return null;
-  // @ts-ignore assume repository Invoice includes userId field
-  const userId: string = (invoice as any).userId;
+  const userId: string = invoice.userId;
   const profile = userId ? await businessProfileRepository.findByUserId(userId) : null;
-  return { ...(invoice as Invoice), businessProfile: profile || null };
+  return { ...invoice, businessProfile: profile || null };
 }
 
 async function createWithProfile(userId: string, data: Omit<CreateInvoiceDTO, 'userId'>): Promise<InvoiceWithBusinessProfile> {
   const invoice = await invoiceRepository.create({ ...data, userId });
   const profile = await businessProfileRepository.findByUserId(userId);
   return { ...invoice, businessProfile: profile || null };
+}
+
+// New service method: paginated and filtered invoices scoped by user (uses Prisma via repository)
+async function getPaginatedInvoices(userId: string, query: InvoiceQueryParams): Promise<PaginatedInvoicesResponse> {
+  const { invoices, totalCount } = await invoiceRepository.findManyWithPaginationAndFilters(userId, query);
+  return {
+    invoices,
+    metadata: {
+      totalCount,
+      page: query.page,
+      limit: query.limit,
+    },
+  };
 }
 
 const invoiceService = {
@@ -62,6 +75,8 @@ const invoiceService = {
   listWithProfileByUser,
   getWithProfileById,
   createWithProfile,
+  // paginated listing
+  getPaginatedInvoices,
 };
 
 export default invoiceService;

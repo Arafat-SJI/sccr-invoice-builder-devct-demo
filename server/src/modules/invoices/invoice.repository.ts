@@ -1,4 +1,7 @@
 import { randomUUID } from 'crypto';
+import type { Invoice as PrismaInvoice } from '@prisma/client';
+import prisma from '../../database/prisma';
+import { InvoiceQueryParams } from './invoice.types';
 
 export type InvoiceItem = {
   description: string;
@@ -88,12 +91,58 @@ async function remove(id: string): Promise<boolean> {
   return true;
 }
 
+// New: Use Prisma to fetch paginated and filtered invoices owned by a user
+async function findManyWithPaginationAndFilters(
+  userId: string,
+  query: InvoiceQueryParams,
+): Promise<{ invoices: PrismaInvoice[]; totalCount: number }> {
+  const { page, limit, status, customer, startDate, endDate, invoiceNumber } = query;
+
+  const where: any = { userId };
+
+  if (status) where.status = status;
+
+  // Customer filter: interpret as exact match on customerId (preferred). If your schema uses customer name,
+  // replace with { customer: { name: customer } } and ensure an index exists accordingly.
+  if (customer) where.customerId = customer;
+
+  if (invoiceNumber) where.invoiceNumber = invoiceNumber;
+
+  if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) {
+      const start = new Date(`${startDate}T00:00:00.000Z`);
+      if (!isNaN(start.getTime())) (where.createdAt as any).gte = start;
+    }
+    if (endDate) {
+      const end = new Date(`${endDate}T23:59:59.999Z`);
+      if (!isNaN(end.getTime())) (where.createdAt as any).lte = end;
+    }
+  }
+
+  const skip = (page - 1) * limit;
+  const take = limit;
+
+  const [invoices, totalCount] = await Promise.all([
+    prisma.invoice.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.invoice.count({ where }),
+  ]);
+
+  return { invoices, totalCount };
+}
+
 export const invoiceRepository = {
   findAllByUser,
   findById,
   create,
   update,
   remove,
+  findManyWithPaginationAndFilters,
 };
 
 export default invoiceRepository;

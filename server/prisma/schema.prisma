@@ -74,4 +74,8 @@ model Invoice {
 
   @@index([userId])
   @@index([customerId])
+  // Indexes to support common filtering and pagination patterns
+  @@index([status])
+  @@index([invoiceNumber])
+  @@index([createdAt])
 }

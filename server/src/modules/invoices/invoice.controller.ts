@@ -1,14 +1,27 @@
 import { Request, Response, NextFunction } from 'express';
 import invoiceService from './invoice.service';
+import { invoiceQuerySchema } from './invoice.validation';
+import { ZodError } from 'zod';
 
 export async function listInvoices(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.userId || req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const invoices = await invoiceService.listByUser(userId);
-    return res.json(invoices);
+    // Validate and coerce query params for pagination and filters
+    const parsed = invoiceQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      return res.status(400).json({ message: first?.message || 'Invalid query parameters' });
+    }
+
+    const result = await invoiceService.getPaginatedInvoices(userId, parsed.data);
+    return res.json(result);
   } catch (err) {
+    if (err instanceof ZodError) {
+      const first = err.issues[0];
+      return res.status(400).json({ message: first?.message || 'Invalid query parameters' });
+    }
     return next(err);
   }
 }
