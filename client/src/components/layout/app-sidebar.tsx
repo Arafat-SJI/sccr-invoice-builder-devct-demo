@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileText, Users, LogOut, Building2 } from "lucide-react";
+import { LayoutDashboard, FileText, Users, LogOut, Building2, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -47,6 +47,12 @@ export function AppSidebar() {
       title: "Business Profile",
       href: "/dashboard/settings/profile",
       icon: Building2,
+      disabled: false,
+    },
+    {
+      title: "Health",
+      href: "/dashboard/health",
+      icon: Activity,
       disabled: false,
     },
   ];
