@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Receipt, Users, Zap } from 'lucide-react';
@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth/auth-hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageContainer } from '@/components/layout/PageContainer';
+import { getHealthStatus } from '@/lib/api/health';
 
 const features = [
   {
@@ -31,12 +32,52 @@ export default function Home() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
+  const [healthStatus, setHealthStatus] = useState<string | null>(null);
+  const [loadingHealth, setLoadingHealth] = useState<boolean>(true);
+  const [healthError, setHealthError] = useState<string | null>(null);
+
   useEffect(() => {
     if (isAuthenticated) router.replace('/dashboard');
   }, [isAuthenticated, router]);
 
+  useEffect(() => {
+    const fetchHealth = async () => {
+      setLoadingHealth(true);
+      setHealthError(null);
+      try {
+        const status = await getHealthStatus();
+        if (status.startsWith('Error')) {
+          setHealthError(status);
+          setHealthStatus(null);
+        } else {
+          setHealthStatus(status);
+          setHealthError(null);
+        }
+      } catch (err: any) {
+        setHealthError(`Failed to fetch health status: ${err?.message || 'Unknown error'}`);
+        setHealthStatus(null);
+      } finally {
+        setLoadingHealth(false);
+      }
+    };
+
+    fetchHealth();
+  }, []);
+
   return (
     <PageContainer centered={false} className="mx-auto max-w-6xl py-12 sm:py-16 lg:py-20">
+      <div className="mb-8 rounded-lg border bg-card/80 p-4 shadow-sm">
+        {loadingHealth && (
+          <p className="text-sm text-muted-foreground">Checking backend status...</p>
+        )}
+        {!loadingHealth && healthError && (
+          <p className="text-sm text-red-600 dark:text-red-400">Backend Status: {healthError}</p>
+        )}
+        {!loadingHealth && healthStatus && !healthError && (
+          <p className="text-sm text-green-600 dark:text-green-400">Backend Status: {healthStatus}</p>
+        )}
+      </div>
+
       <section className="grid gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
         <div className="space-y-6">
           <p className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
